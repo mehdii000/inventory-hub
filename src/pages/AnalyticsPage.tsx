@@ -32,8 +32,8 @@ const pieData = [
 ];
 
 const PIE_COLORS = [
-  "hsl(185, 72%, 45%)",
-  "hsl(38, 92%, 50%)",
+  "hsl(185, 72%, 38%)",
+  "hsl(38, 92%, 45%)",
   "hsl(0, 72%, 55%)",
 ];
 
@@ -86,27 +86,27 @@ export default function AnalyticsPage() {
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
                   <XAxis
                     dataKey="category"
-                    tick={{ fontSize: 10, fill: "hsl(215, 15%, 50%)" }}
-                    axisLine={{ stroke: "hsl(220, 20%, 18%)" }}
+                    tick={{ fontSize: 10, fill: "hsl(215, 16%, 47%)" }}
+                    axisLine={{ stroke: "hsl(214, 20%, 88%)" }}
                   />
                   <YAxis
-                    tick={{ fontSize: 10, fill: "hsl(215, 15%, 50%)" }}
-                    axisLine={{ stroke: "hsl(220, 20%, 18%)" }}
+                    tick={{ fontSize: 10, fill: "hsl(215, 16%, 47%)" }}
+                    axisLine={{ stroke: "hsl(214, 20%, 88%)" }}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(222, 40%, 10%)",
-                      border: "1px solid hsl(220, 20%, 18%)",
+                      backgroundColor: "hsl(0, 0%, 100%)",
+                      border: "1px solid hsl(214, 20%, 88%)",
                       borderRadius: "8px",
                       fontSize: "12px",
-                      color: "hsl(210, 20%, 92%)",
+                      color: "hsl(222, 47%, 11%)",
                     }}
                   />
-                  <Bar dataKey="current" fill="hsl(215, 15%, 35%)" radius={[4, 4, 0, 0]} name="Current" />
-                  <Bar dataKey="projected" fill="hsl(185, 72%, 45%)" radius={[4, 4, 0, 0]} name="Projected" />
+                  <Bar dataKey="current" fill="hsl(214, 20%, 80%)" radius={[4, 4, 0, 0]} name="Current" />
+                  <Bar dataKey="projected" fill="hsl(185, 72%, 38%)" radius={[4, 4, 0, 0]} name="Projected" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -138,11 +138,11 @@ export default function AnalyticsPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(222, 40%, 10%)",
-                      border: "1px solid hsl(220, 20%, 18%)",
+                      backgroundColor: "hsl(0, 0%, 100%)",
+                      border: "1px solid hsl(214, 20%, 88%)",
                       borderRadius: "8px",
                       fontSize: "12px",
-                      color: "hsl(210, 20%, 92%)",
+                      color: "hsl(222, 47%, 11%)",
                     }}
                     formatter={(value: number) => `${value}%`}
                   />
@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
                     verticalAlign="bottom"
                     iconType="circle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: "11px", color: "hsl(215, 15%, 50%)" }}
+                    wrapperStyle={{ fontSize: "11px", color: "hsl(215, 16%, 47%)" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
