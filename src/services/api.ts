@@ -24,11 +24,11 @@ export async function processMB52(file: File): Promise<Blob> {
   );
 }
 
-export async function processMB51(file: File): Promise<Blob> {
+export async function processMB51(file: File, movementType: string = "102"): Promise<Blob> {
   await simulateDelay();
   maybeThrow();
   return new Blob(
-    [`MB51 Filtered — Source: ${file.name}\nProcessed at ${new Date().toISOString()}`],
+    [`MB51 Filtered — Source: ${file.name}, Movement Type: ${movementType}\nProcessed at ${new Date().toISOString()}`],
     { type: "text/csv" }
   );
 }

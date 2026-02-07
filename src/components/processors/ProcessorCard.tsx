@@ -1,8 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { FileDropZone } from "@/components/processors/FileDropZone";
+import { ProcessingPipeline } from "@/components/processors/ProcessingPipeline";
 import { useHistory } from "@/contexts/HistoryContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,9 @@ interface ProcessorCardProps {
   processorKey: string;
   fileInputs: FileInputConfig[];
   onProcess: (files: File[]) => Promise<Blob>;
+  steps?: string[];
+  output?: string;
+  children?: ReactNode;
 }
 
 export function ProcessorCard({
@@ -27,6 +32,9 @@ export function ProcessorCard({
   processorKey,
   fileInputs,
   onProcess,
+  steps,
+  output,
+  children,
 }: ProcessorCardProps) {
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,6 +97,8 @@ export function ProcessorCard({
           />
         ))}
 
+        {children}
+
         <Button
           onClick={handleProcess}
           disabled={!allFilesReady || isProcessing}
@@ -103,6 +113,13 @@ export function ProcessorCard({
             t("processors.process")
           )}
         </Button>
+
+        {steps && steps.length > 0 && output && (
+          <>
+            <Separator className="my-2" />
+            <ProcessingPipeline steps={steps} output={output} />
+          </>
+        )}
       </CardContent>
     </Card>
   );
