@@ -1,10 +1,7 @@
 import { useState, useCallback, ReactNode } from "react";
-import { Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { FileDropZone } from "@/components/processors/FileDropZone";
-import { ProcessingPipeline } from "@/components/processors/ProcessingPipeline";
 import { useHistory } from "@/contexts/HistoryContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -19,10 +16,9 @@ interface ProcessorCardProps {
   titleKey: string;
   descriptionKey: string;
   processorKey: string;
+  icon: React.ElementType;
   fileInputs: FileInputConfig[];
   onProcess: (files: File[]) => Promise<Blob>;
-  steps?: string[];
-  output?: string;
   children?: ReactNode;
 }
 
@@ -30,10 +26,9 @@ export function ProcessorCard({
   titleKey,
   descriptionKey,
   processorKey,
+  icon: Icon,
   fileInputs,
   onProcess,
-  steps,
-  output,
   children,
 }: ProcessorCardProps) {
   const [files, setFiles] = useState<Record<string, File | null>>({});
@@ -41,10 +36,20 @@ export function ProcessorCard({
   const { addRecord, updateRecord } = useHistory();
   const { t } = useLanguage();
 
-  const allFilesReady = fileInputs.every((fi) => files[fi.id] !== undefined && files[fi.id] !== null);
+  const allFilesReady = fileInputs.every(
+    (fi) => files[fi.id] !== undefined && files[fi.id] !== null
+  );
 
   const handleFileSelect = useCallback((inputId: string, file: File) => {
     setFiles((prev) => ({ ...prev, [inputId]: file }));
+  }, []);
+
+  const handleClearFile = useCallback((inputId: string) => {
+    setFiles((prev) => {
+      const next = { ...prev };
+      delete next[inputId];
+      return next;
+    });
   }, []);
 
   const handleProcess = useCallback(async () => {
@@ -72,20 +77,34 @@ export function ProcessorCard({
       setIsProcessing(false);
       setFiles({});
     }
-  }, [allFilesReady, isProcessing, fileInputs, files, addRecord, updateRecord, onProcess, t, titleKey, processorKey]);
+  }, [
+    allFilesReady, isProcessing, fileInputs, files,
+    addRecord, updateRecord, onProcess, t, titleKey, processorKey,
+  ]);
 
   return (
-    <Card className={cn(
-      "animate-fade-in border-border/60 transition-shadow hover:shadow-lg hover:shadow-primary/5",
-      isProcessing && "border-glow"
-    )}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">{t(titleKey)}</CardTitle>
-        <CardDescription className="text-xs leading-relaxed">
-          {t(descriptionKey)}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div
+      className={cn(
+        "rounded-2xl border border-border/60 bg-card p-6 animate-fade-in transition-all duration-300",
+        "hover:shadow-md hover:shadow-primary/5",
+        isProcessing && "border-glow ring-1 ring-primary/10"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">{t(titleKey)}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+            {t(descriptionKey)}
+          </p>
+        </div>
+      </div>
+
+      {/* File Inputs */}
+      <div className="space-y-3">
         {fileInputs.map((fi) => (
           <FileDropZone
             key={fi.id}
@@ -93,34 +112,34 @@ export function ProcessorCard({
             accept={fi.accept}
             file={files[fi.id] ?? null}
             onFileSelect={(file) => handleFileSelect(fi.id, file)}
+            onClear={() => handleClearFile(fi.id)}
             disabled={isProcessing}
           />
         ))}
+      </div>
 
-        {children}
+      {/* Extra controls (e.g., movement type select) */}
+      {children && <div className="mt-4">{children}</div>}
 
-        <Button
-          onClick={handleProcess}
-          disabled={!allFilesReady || isProcessing}
-          className="w-full"
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("processors.processing")}
-            </>
-          ) : (
-            t("processors.process")
-          )}
-        </Button>
-
-        {steps && steps.length > 0 && output && (
+      {/* Process Button */}
+      <Button
+        onClick={handleProcess}
+        disabled={!allFilesReady || isProcessing}
+        className="w-full mt-5 h-11 text-sm font-medium gap-2"
+        size="lg"
+      >
+        {isProcessing ? (
           <>
-            <Separator className="my-2" />
-            <ProcessingPipeline steps={steps} output={output} />
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t("processors.processing")}
+          </>
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            {t("processors.process")}
           </>
         )}
-      </CardContent>
-    </Card>
+      </Button>
+    </div>
   );
 }
