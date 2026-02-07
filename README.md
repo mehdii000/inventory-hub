@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# StockSync
 
-## Project info
+StockSync is a high-performance data processor and analytics generator desktop application.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 🚀 Quick Start
 
-## How can I edit this code?
+To get the development environment up and running, follow these steps:
 
-There are several ways of editing your application.
+### 1. Build Python Dependencies
 
-**Use Lovable**
+First, ensure the Python components are compiled and ready:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+```bash
+bun build:py
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 2. Launch the Application
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+You can run the app in development mode or create a production build.
 
-**Use GitHub Codespaces**
+**For Development:**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+bun electron:dev
 
-## What technologies are used for this project?
+```
 
-This project is built with:
+**For Production Build:**
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+bun electron:build
 
-## How can I deploy this project?
+```
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## 📂 Distribution & Execution
 
-Yes, you can!
+After running the build command, your packaged application will be located in the distribution folder.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+* **Path:** `dist_electron/`
+* **Action:** Navigate to this folder and run the executable corresponding to your OS.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+---
+
+## 🛠 Tech Stack
+
+* **Runtime:** [Bun](https://bun.sh/)
+* **Framework:** [Electron](https://www.electronjs.org/)
+* **Backend Logic:** Python
+* **Package Manager:** Bun
+
+## 📝 Development Notes
+
+> **Note:** Ensure you have your Python environment configured and all global dependencies installed before running `bun build:py` to avoid path errors.
+
+---
