@@ -9,6 +9,10 @@ def kys():
     # This endpoint is sent from the frontend as a last resort telling the process to kill itself.
     sys.exit(0)
 
+@app.route('/health')
+def health():
+    return jsonify("We good")
+
 if __name__ == '__main__':
     begin_check()
     app.run(host='127.0.0.1', port=5454, debug=True, threaded=True)
