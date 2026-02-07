@@ -203,7 +203,17 @@ export default function ProcessorsPage() {
                 fileInputs={[
                   { id: "mb51", labelKey: "processors.mb51.file1Label", accept: ".xlsx,.xls,.csv" },
                 ]}
-                onProcess={(files) => processMB51(files[0], movementType)}
+                onProcess={async (files) => { 
+                  const blob = await processMB51(files[0], Number(movementType));
+                  
+                  const arrayBuffer = await blob.arrayBuffer();
+                  const defaultName = `MB51_Filtered_${new Date().getTime()}.xlsx`;
+
+                  // Native Electron Save
+                  await window.electronAPI.saveProcessedFile(arrayBuffer, defaultName);
+                  
+                  return blob;
+                }}
               >
                 <div className="space-y-2">
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
@@ -214,8 +224,8 @@ export default function ProcessorsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-popover z-50">
-                      <SelectItem value="102">102 — Goods Receipt Reversal</SelectItem>
-                      <SelectItem value="202">202 — Goods Issue Reversal</SelectItem>
+                      <SelectItem value="102">102</SelectItem>
+                      <SelectItem value="202">202</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

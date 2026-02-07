@@ -49,13 +49,22 @@ export async function processMB52(file: File): Promise<Blob> {
   return await response.blob();
 }
 
-export async function processMB51(file: File, movementType: string = "102"): Promise<Blob> {
-  await simulateDelay();
-  maybeThrow();
-  return new Blob(
-    [`MB51 Filtered — Source: ${file.name}, Movement Type: ${movementType}\nProcessed at ${new Date().toISOString()}`],
-    { type: "text/csv" }
-  );
+export async function processMB51(file: File, movementType: number): Promise<Blob> {
+  const formData = new FormData();
+  formData.append('mb51_file', file);
+  formData.append('movement_type', movementType.toString());
+
+  const response = await fetch('http://localhost:5454/processors/mb51', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to process MB51');
+  }
+
+  return await response.blob();
 }
 
 /* ── Helpers ─────────────────────────────────── */
