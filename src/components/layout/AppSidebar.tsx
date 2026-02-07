@@ -78,7 +78,7 @@ export function AppSidebar() {
           <Globe className="h-4 w-4 shrink-0" />
           {!collapsed && (
             <span className="uppercase font-mono text-xs tracking-widest">
-              {language === "en" ? "FR" : "EN"}
+              {language === "en" ? "EN" : "FR"}
             </span>
           )}
         </button>

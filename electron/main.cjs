@@ -1,12 +1,14 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
 const { spawn } = require("child_process");
+const { ipcMain, dialog } = require('electron');
+const fs = require('fs');
 
 const isDev = !app.isPackaged;
 let pyProc = null;
-let mainWindow = null; // Use 'let' and declare it at the top level
+let mainWindow = null;
 
-// 1. SINGLE INSTANCE LOCK (Check this FIRST before anything else)
+// 1. SINGLE INSTANCE LOCK
 const isFirstInstance = app.requestSingleInstanceLock();
 
 if (!isFirstInstance) {
@@ -21,21 +23,42 @@ if (!isFirstInstance) {
 
   // 2. BACKEND LOGIC
   function startPython() {
-    let pyPath;
+    let pyCommand;
+    let args = [];
+
     if (isDev) {
-      // Dev path: PROJECT_ROOT/backend/dist/app.exe
-      pyPath = path.join(process.cwd(), "backend", "dist", "app.exe");
+      /**
+       * DEV MODE: Mimics terminal "python ../backend/app.py"
+       * shell: true allows the OS to find 'python' in the system PATH.
+       */
+      pyCommand = process.platform === "win32" ? "python" : "python3";
+      
+      // Assumes your folder structure is:
+      // Project/electron/main.js
+      // Project/backend/app.py
+      const scriptPath = path.join(__dirname, "..", "backend", "app.py"); 
+      args = [scriptPath];
+      
+      console.log(`[Dev] Executing terminal command: ${pyCommand} ${scriptPath}`);
     } else {
-      // Prod path: resources/backend/app.exe
-      pyPath = path.join(process.resourcesPath, "backend", "app.exe");
+      /**
+       * PROD MODE: Runs the compiled executable from the resources folder.
+       */
+      pyCommand = path.join(process.resourcesPath, "backend", "app.exe");
+      args = [];
+      
+      console.log(`[Prod] Executing binary: ${pyCommand}`);
     }
 
-    pyProc = spawn(pyPath, [], { 
-      windowsHide: false,
-      stdio: 'ignore' // Good practice to prevent pipe clogs in prod
+    pyProc = spawn(pyCommand, args, { 
+      windowsHide: true,
+      stdio: "inherit",
+      shell: isDev, // Run as a shell command in dev to find 'python' easily
     });
 
-    pyProc.on("error", (err) => console.error("Failed to start backend:", err));
+    pyProc.on("error", (err) => {
+      console.error("CRITICAL: Failed to start backend process:", err);
+    });
   }
 
   // 3. WINDOW LOGIC
@@ -47,7 +70,6 @@ if (!isFirstInstance) {
       minHeight: 600,
       title: "StockSync",
       webPreferences: {
-        // Ensure this file exists in your electron/ folder!
         preload: path.join(__dirname, "preload.cjs"),
         contextIsolation: true,
         nodeIntegration: false,
@@ -59,8 +81,6 @@ if (!isFirstInstance) {
     if (isDev) {
       mainWindow.loadURL("http://localhost:8080");
     } else {
-      // PRODUCTION PATH FIX:
-      // If main.cjs is in /electron and HTML is in /dist:
       const indexPath = path.join(__dirname, "..", "dist", "index.html");
       mainWindow.loadFile(indexPath).catch((e) => console.error("Failed to load web files:", e));
     }
@@ -77,15 +97,17 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
+// 5. CLEANUP
 app.on("will-quit", () => {
   if (pyProc) {
-    // 1. Send the "Poison Pill" to the Flask server first
-    // Using a simple request to tell Flask to shut itself down gracefully
+    console.log("Shutting down backend...");
+    
+    // Attempt Graceful Shutdown (Flask /kys route)
+    // Note: 'fetch' is available in Node 18+
     fetch("http://127.0.0.1:5454/kys").catch(() => {});
 
-    // 2. Windows specific: Nuke the process tree
     if (process.platform === "win32") {
-      // We use 'spawnSync' to ensure Electron waits long enough to send the command
+      // Force kill the process tree on Windows to ensure no ghost processes
       const { spawnSync } = require("child_process");
       spawnSync("taskkill", ["/pid", pyProc.pid, "/f", "/t"]);
     } else {
@@ -94,4 +116,20 @@ app.on("will-quit", () => {
 
     pyProc = null;
   }
+});
+
+ipcMain.handle('dialog:saveFile', async (event, arrayBuffer, fileName) => {
+  const { filePath } = await dialog.showSaveDialog({
+    defaultPath: fileName,
+    filters: [
+      { name: 'Excel Files', extensions: ['xlsx'] },
+      { name: 'Zip Files', extensions: ['zip'] }
+    ]
+  });
+
+  if (filePath) {
+    fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
+    return true; // Success
+  }
+  return false; // User cancelled
 });

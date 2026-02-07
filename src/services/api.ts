@@ -5,23 +5,48 @@
 
 export async function processGlobalOrders(
   me2nFile: File,
-  ebmFile: File
+  ebmFile: File // Note: Your Flask code expects 'lotus_file'
 ): Promise<Blob> {
-  await simulateDelay();
-  maybeThrow();
-  return new Blob(
-    [`Global Orders — ME2N: ${me2nFile.name}, eBM: ${ebmFile.name}\nProcessed at ${new Date().toISOString()}`],
-    { type: "text/csv" }
-  );
+  const formData = new FormData();
+  
+  // These keys must match the strings in: request.files['key']
+  formData.append('me2n_file', me2nFile);
+  formData.append('lotus_file', ebmFile);
+
+  const response = await fetch('http://localhost:5454/processors/global_orders', {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to process orders');
+  }
+
+  // Convert the response stream into a Blob (Binary Large Object)
+  return await response.blob();
 }
 
 export async function processMB52(file: File): Promise<Blob> {
-  await simulateDelay();
-  maybeThrow();
-  return new Blob(
-    [`MB52 Filtered — Source: ${file.name}\nProcessed at ${new Date().toISOString()}`],
-    { type: "text/csv" }
-  );
+  // 1. Prepare the form data with the key 'mb52_file' 
+  // (matching your Flask request.files['mb52_file'])
+  const formData = new FormData();
+  formData.append('mb52_file', file);
+
+  // 2. Make the request to your Flask server
+  const response = await fetch('http://localhost:5454/processors/mb52', {
+    method: 'POST',
+    body: formData,
+  });
+
+  // 3. Handle server errors
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Server responded with status ${response.status}`);
+  }
+
+  // 4. Return the binary data (Zip or Excel) as a Blob
+  return await response.blob();
 }
 
 export async function processMB51(file: File, movementType: string = "102"): Promise<Blob> {

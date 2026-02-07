@@ -29,7 +29,7 @@ const processors = {
     ],
     output: "Consolidated Global Orders (.csv)",
   },
-  mb52: {
+  "mb52": {
     icon: Database,
     steps: [
       { label: "Load MB52 warehouse stock data", icon: FileSpreadsheet },
@@ -39,7 +39,7 @@ const processors = {
     ],
     output: "Filtered Stock Report (.csv)",
   },
-  mb51: {
+  "mb51": {
     icon: ClipboardList,
     getSteps: (mvt: string) => [
       { label: "Load MB51 material documents", icon: FileSpreadsheet },
@@ -48,6 +48,16 @@ const processors = {
       { label: "Summarize quantities by material", icon: Calculator },
     ],
     output: "Filtered Movement Report (.csv)",
+  },
+  "mb54": {
+    icon: ClipboardList,
+    getSteps: (mvt: string) => [
+      { label: "Load MB52 material documents", icon: FileSpreadsheet },
+      { label: `Filter by movement type (${mvt})`, icon: ArrowRightLeft },
+      { label: "Extract relevant date-range entries", icon: Calendar },
+      { label: "Summarize quantities by material", icon: Calculator },
+    ],
+    output: "Filtered MB54 Report (.csv)",
   },
 };
 
@@ -85,6 +95,7 @@ export default function ProcessorsPage() {
             <ClipboardList className="h-4 w-4" />
             <span>{t("processors.mb51.title")}</span>
           </TabsTrigger>
+          
         </TabsList>
 
         {/* ── Global Orders ──────────────────────── */}
@@ -100,7 +111,27 @@ export default function ProcessorsPage() {
                   { id: "me2n", labelKey: "processors.globalOrders.file1Label", accept: ".xlsx,.xls,.csv" },
                   { id: "ebm", labelKey: "processors.globalOrders.file2Label", accept: ".xlsx,.xls,.csv" },
                 ]}
-                onProcess={(files) => processGlobalOrders(files[0], files[1])}
+                onProcess={async (files) => {
+                  // 1. Call your Python API function (files[0] = me2n, files[1] = ebm)
+                  const blob = await processGlobalOrders(files[0], files[1]);
+
+                  // 2. Prepare the naming logic
+                  const timestamp = new Date().toISOString().split('T')[0];
+                  const defaultName = `GlobalOrders_${timestamp}.xlsx`;
+
+                  // 3. Convert Blob to ArrayBuffer for the Electron bridge
+                  const arrayBuffer = await blob.arrayBuffer();
+
+                  // 4. Trigger the native Save Dialog via the preload API we set up
+                  const success = await window.electronAPI.saveProcessedFile(arrayBuffer, defaultName);
+
+                  if (success) {
+                    console.log("Global Orders file saved successfully!");
+                  }
+
+                  // Return blob to satisfy the onProcess signature
+                  return blob;
+                }}
               />
             </div>
             <div className="lg:col-span-2">
@@ -126,7 +157,27 @@ export default function ProcessorsPage() {
                 fileInputs={[
                   { id: "mb52", labelKey: "processors.mb52.file1Label", accept: ".xlsx,.xls,.csv" },
                 ]}
-                onProcess={(files) => processMB52(files[0])}
+                onProcess={async (files) => {
+                  // 1. Call your existing Python API function
+                  const blob = await processMB52(files[0]);
+
+                  // 2. Prepare for Electron
+                  const extension = blob.type === 'application/zip' ? 'zip' : 'xlsx';
+                  const defaultName = `MB52_Filtered_${new Date().toISOString().split('T')[0]}.${extension}`;
+                  
+                  // 3. Convert Blob to ArrayBuffer (required for IPC transfer)
+                  const arrayBuffer = await blob.arrayBuffer();
+
+                  // 4. Send to Electron Main Process
+                  const success = await window.electronAPI.saveProcessedFile(arrayBuffer, defaultName);
+
+                  if (success) {
+                    console.log("File saved to disk!");
+                  }
+
+                  // Return the blob back to the card if it needs it for internal state/UI
+                  return blob;
+                }}
               />
             </div>
             <div className="lg:col-span-2">
