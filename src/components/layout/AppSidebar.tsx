@@ -16,6 +16,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+const APP_VERSION = "1.0.0";
+
 const navItems = [
   { titleKey: "nav.processors", url: "/", icon: Cog },
   { titleKey: "nav.history", url: "/history", icon: History },
@@ -46,7 +48,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{!collapsed ? t("nav.processors").charAt(0).toUpperCase() + "avigation" : ""}</SidebarGroupLabel>
+          <SidebarGroupLabel>{!collapsed ? "Navigation" : ""}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -82,6 +84,19 @@ export function AppSidebar() {
             </span>
           )}
         </button>
+
+        {/* App Version */}
+        <div className="flex items-center gap-3 px-3 py-2">
+          {!collapsed ? (
+            <span className="text-[10px] font-mono text-muted-foreground/60 tracking-wide">
+              {t("nav.version")} {APP_VERSION}
+            </span>
+          ) : (
+            <span className="text-[9px] font-mono text-muted-foreground/50 w-full text-center">
+              {APP_VERSION}
+            </span>
+          )}
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

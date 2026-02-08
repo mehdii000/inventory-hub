@@ -5,6 +5,7 @@ export const translations = {
       history: "History",
       analytics: "Analytics",
       brand: "Inventory Hub",
+      version: "Version",
     },
     language: {
       label: "Language",
@@ -64,6 +65,37 @@ export const translations = {
       uploadLabel: "Master Inventory Data",
       projectedStock: "Projected Stock Levels",
       filterEfficiency: "Filtering Efficiency",
+      groups: {
+        etatJournalier: "Etat Journalier de Stock",
+        etatJournalierDesc: "Analytics derived from daily stock status reports",
+        otherAnalytics: "Other Analytics",
+        otherAnalyticsDesc: "Independent analytics modules",
+      },
+      placeholders: {
+        monthlyStockRupture: {
+          title: "Monthly Stock Rupture",
+          description: "Track monthly stock-out occurrences and patterns across warehouses.",
+        },
+        stockCoverage: {
+          title: "Stock Coverage Analysis",
+          description: "Analyze days of stock coverage remaining by material group.",
+        },
+        slowMoving: {
+          title: "Slow-Moving Inventory",
+          description: "Identify materials with minimal movement over the past 90 days.",
+        },
+        consumptionTrend: {
+          title: "Consumption Trend",
+          description: "Visualize material consumption trends over selected periods.",
+        },
+        warehouseUtilization: {
+          title: "Warehouse Utilization",
+          description: "Measure storage location utilization rates and capacity planning.",
+        },
+      },
+      inputFile: "Input File",
+      comingSoon: "Coming Soon",
+      plannedFeature: "This analytics module is planned for a future release.",
     },
     status: {
       processing: "Processing",
@@ -77,6 +109,7 @@ export const translations = {
       history: "Historique",
       analytics: "Analytique",
       brand: "Inventory Hub",
+      version: "Version",
     },
     language: {
       label: "Langue",
@@ -136,6 +169,37 @@ export const translations = {
       uploadLabel: "Données d'Inventaire Maître",
       projectedStock: "Niveaux de Stock Projetés",
       filterEfficiency: "Efficacité de Filtrage",
+      groups: {
+        etatJournalier: "Etat Journalier de Stock",
+        etatJournalierDesc: "Analytiques dérivées des rapports quotidiens de l'état du stock",
+        otherAnalytics: "Autres Analytiques",
+        otherAnalyticsDesc: "Modules analytiques indépendants",
+      },
+      placeholders: {
+        monthlyStockRupture: {
+          title: "Rupture de Stock Mensuelle",
+          description: "Suivez les ruptures de stock mensuelles et leurs tendances dans les entrepôts.",
+        },
+        stockCoverage: {
+          title: "Analyse de Couverture de Stock",
+          description: "Analysez les jours de couverture de stock restants par groupe de matériaux.",
+        },
+        slowMoving: {
+          title: "Stock à Rotation Lente",
+          description: "Identifiez les matériaux avec un mouvement minimal au cours des 90 derniers jours.",
+        },
+        consumptionTrend: {
+          title: "Tendance de Consommation",
+          description: "Visualisez les tendances de consommation de matériaux sur les périodes sélectionnées.",
+        },
+        warehouseUtilization: {
+          title: "Utilisation des Entrepôts",
+          description: "Mesurez les taux d'utilisation des emplacements de stockage et la planification des capacités.",
+        },
+      },
+      inputFile: "Fichier d'entrée",
+      comingSoon: "Bientôt Disponible",
+      plannedFeature: "Ce module analytique est prévu pour une version future.",
     },
     status: {
       processing: "En cours",
