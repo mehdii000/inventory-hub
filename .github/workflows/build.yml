@@ -28,10 +28,7 @@ jobs:
       - name: Build Python Backend
         run: |
             pip install pyinstaller -r backend/requirements.txt
-            pyinstaller --onefile --name=app \
-            --distpath backend/dist \
-            --workpath backend/build \
-            backend/app.py
+            pyinstaller --onefile --name=app --distpath backend/dist --workpath backend/build backend/app.py
 
       - name: Build Electron App
         run: |
