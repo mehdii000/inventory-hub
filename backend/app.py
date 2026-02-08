@@ -15,6 +15,10 @@ CORS(app)
 def kys():
     sys.exit(0)
 
+@app.route('/health')
+def health():
+    return jsonify("OK!")
+
 @app.route('/processors/global_orders', methods=['POST'])
 def process_global_orders_route():
     try:

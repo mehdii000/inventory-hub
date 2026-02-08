@@ -9,9 +9,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # ubuntu-latest creates the Linux .AppImage
         # windows-latest creates the Windows .exe
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
 
     steps:
       - name: Checkout Code
@@ -28,7 +27,7 @@ jobs:
       - name: Build Python Backend
         run: |
             pip install pyinstaller -r backend/requirements.txt
-            pyinstaller --onefile --name=app --distpath backend/dist --workpath backend/build backend/app.py
+            bun run build:py
 
       - name: Build Electron App
         run: |

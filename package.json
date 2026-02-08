@@ -3,17 +3,17 @@
   "author": "MehdiDev",
   "description": "A Excel data processor and anayltics generator.",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
     "dev:vite": "vite",
-    "build:py": "cd backend && python -m PyInstaller --onefile --name=app app.py",
+    "build:py": "cd backend && python -m PyInstaller --noconfirm --onedir --windowed app.py",
     "build": "vite build",
     "dev:electron": "wait-on http://localhost:8080 && electron .",
     "electron:dev": "concurrently -k -p \"[{name}]\" -n \"Vite,Elec\" -c \"cyan,magenta\" \"bun run dev:vite\" \"bun run dev:electron\"",
-    "electron:build": "bun run build && electron-builder"
-
+    "electron:build": "bun run build && electron-builder",
+    "build:all": "bun run build:py && bun run electron:build"
   },
   "build": {
     "appId": "me.mehdidev.stocksync",
@@ -28,12 +28,13 @@
     ],
     "extraResources": [
       {
-        "from": "backend/dist/app.exe",
-        "to": "backend/app.exe"
+        "from": "backend/dist/app",
+        "to": "backend",
+        "filter": ["**/*"]
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "zip"
     }
   },
   "dependencies": {
