@@ -27,7 +27,7 @@ jobs:
       - name: Build Python Backend
         run: |
             pip install pyinstaller -r backend/requirements.txt
-            bun run build:py
+            cd backend && python -m PyInstaller --noconfirm --onedir --windowed app.py
 
       - name: Build Electron App
         run: |
