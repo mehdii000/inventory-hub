@@ -1,0 +1,47 @@
+name: Build Windows and Linux
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # ubuntu-latest creates the Linux .AppImage
+        # windows-latest creates the Windows .exe
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Build Python Backend
+        run: |
+            pip install pyinstaller -r backend/requirements.txt
+            pyinstaller --onefile --name=app \
+            --distpath backend/dist \
+            --workpath backend/build \
+            backend/app.py
+
+      - name: Build Electron App
+        run: |
+          bun install
+          bun run electron:build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Releases
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release: true

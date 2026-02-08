@@ -44,7 +44,7 @@ if (!isFirstInstance) {
       /**
        * PROD MODE: Runs the compiled executable from the resources folder.
        */
-      pyCommand = path.join(process.resourcesPath, "backend", "app.exe");
+      pyCommand = path.join(process.resourcesPath, "backend", process.platform === "win32" ? "app.exe" : "app");
       args = [];
       
       console.log(`[Prod] Executing binary: ${pyCommand}`);
