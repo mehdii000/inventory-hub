@@ -1,45 +1,165 @@
 import { useState } from "react";
-import { Construction, Upload } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Construction, FileSpreadsheet, Lock, TrendingDown, Package,
+  BarChart3, Warehouse, Clock, ChevronRight,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FileDropZone } from "@/components/processors/FileDropZone";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
-const barData = [
-  { category: "Raw Materials", current: 4200, projected: 3800 },
-  { category: "Components", current: 3100, projected: 2900 },
-  { category: "Finished Goods", current: 2800, projected: 3200 },
-  { category: "Packaging", current: 1800, projected: 1600 },
-  { category: "Spare Parts", current: 950, projected: 1100 },
+/* ─── Analytics group definitions ─── */
+
+interface AnalyticItem {
+  id: string;
+  titleKey: string;
+  descriptionKey: string;
+  icon: React.ElementType;
+}
+
+interface AnalyticsGroup {
+  id: string;
+  labelKey: string;
+  descriptionKey: string;
+  inputFileLabel: string;
+  accept: string;
+  items: AnalyticItem[];
+}
+
+const analyticsGroups: AnalyticsGroup[] = [
+  {
+    id: "etat-journalier",
+    labelKey: "analytics.groups.etatJournalier",
+    descriptionKey: "analytics.groups.etatJournalierDesc",
+    inputFileLabel: "Etat Journalier de Stock",
+    accept: ".xlsx,.xls,.csv",
+    items: [
+      {
+        id: "monthly-stock-rupture",
+        titleKey: "analytics.placeholders.monthlyStockRupture.title",
+        descriptionKey: "analytics.placeholders.monthlyStockRupture.description",
+        icon: TrendingDown,
+      },
+      {
+        id: "stock-coverage",
+        titleKey: "analytics.placeholders.stockCoverage.title",
+        descriptionKey: "analytics.placeholders.stockCoverage.description",
+        icon: Package,
+      },
+      {
+        id: "consumption-trend",
+        titleKey: "analytics.placeholders.consumptionTrend.title",
+        descriptionKey: "analytics.placeholders.consumptionTrend.description",
+        icon: BarChart3,
+      },
+    ],
+  },
+  {
+    id: "other",
+    labelKey: "analytics.groups.otherAnalytics",
+    descriptionKey: "analytics.groups.otherAnalyticsDesc",
+    inputFileLabel: "Master Inventory Data",
+    accept: ".xlsx,.xls,.csv",
+    items: [
+      {
+        id: "slow-moving",
+        titleKey: "analytics.placeholders.slowMoving.title",
+        descriptionKey: "analytics.placeholders.slowMoving.description",
+        icon: Clock,
+      },
+      {
+        id: "warehouse-utilization",
+        titleKey: "analytics.placeholders.warehouseUtilization.title",
+        descriptionKey: "analytics.placeholders.warehouseUtilization.description",
+        icon: Warehouse,
+      },
+    ],
+  },
 ];
 
-const pieData = [
-  { name: "Matched", value: 68 },
-  { name: "Partial", value: 22 },
-  { name: "Unmatched", value: 10 },
-];
+/* ─── Placeholder card for a single analytic ─── */
 
-const PIE_COLORS = [
-  "hsl(185, 72%, 38%)",
-  "hsl(38, 92%, 45%)",
-  "hsl(0, 72%, 55%)",
-];
+function AnalyticPlaceholderCard({ item, t }: { item: AnalyticItem; t: (key: string) => string }) {
+  const Icon = item.icon;
+
+  return (
+    <div className="group relative rounded-xl border border-border/60 bg-card p-5 transition-all hover:shadow-md hover:border-primary/20">
+      {/* Coming Soon ribbon */}
+      <div className="absolute top-3 right-3">
+        <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-wider gap-1 bg-muted text-muted-foreground">
+          <Lock className="h-3 w-3" />
+          {t("analytics.comingSoon")}
+        </Badge>
+      </div>
+
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 pr-20">
+          <h3 className="text-sm font-semibold text-foreground">{t(item.titleKey)}</h3>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{t(item.descriptionKey)}</p>
+        </div>
+      </div>
+
+      {/* Subtle bottom indicator */}
+      <div className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+        <ChevronRight className="h-3 w-3" />
+        <span>{t("analytics.plannedFeature")}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Group panel: shared file input + analytics cards ─── */
+
+function AnalyticsGroupPanel({ group, t }: { group: AnalyticsGroup; t: (key: string) => string }) {
+  const [file, setFile] = useState<File | null>(null);
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Group header */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">{t(group.labelKey)}</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">{t(group.descriptionKey)}</p>
+      </div>
+
+      {/* Shared file input */}
+      <Card className="border-border/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <FileSpreadsheet className="h-4 w-4 text-primary" />
+            {t("analytics.inputFile")}: {group.inputFileLabel}
+          </CardTitle>
+          <CardDescription className="text-xs">
+            {group.items.length} {group.items.length === 1 ? "analytic" : "analytics"} share this input
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FileDropZone
+            label={group.inputFileLabel}
+            accept={group.accept}
+            file={file}
+            onFileSelect={setFile}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Analytics cards grid */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {group.items.map((item) => (
+          <AnalyticPlaceholderCard key={item.id} item={item} t={t} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Page ─── */
 
 export default function AnalyticsPage() {
   const { t } = useLanguage();
-  const [masterFile, setMasterFile] = useState<File | null>(null);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -57,107 +177,30 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* File Upload */}
-      <Card className="border-border/60">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Upload className="h-4 w-4 text-primary" />
-            {t("analytics.uploadLabel")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FileDropZone
-            label={t("analytics.uploadLabel")}
-            accept=".xlsx,.xls,.csv"
-            file={masterFile}
-            onFileSelect={setMasterFile}
-          />
-        </CardContent>
-      </Card>
+      {/* Tabbed groups */}
+      <Tabs defaultValue={analyticsGroups[0].id} className="w-full">
+        <TabsList className="mb-6 h-auto p-1 gap-1 bg-muted/60">
+          {analyticsGroups.map((group) => (
+            <TabsTrigger
+              key={group.id}
+              value={group.id}
+              className="gap-2 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:shadow-sm"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              <span>{t(group.labelKey)}</span>
+              <Badge variant="outline" className="ml-1 text-[10px] h-5 px-1.5 font-mono">
+                {group.items.length}
+              </Badge>
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Charts Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Bar Chart */}
-        <Card className="border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">{t("analytics.projectedStock")}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 20%, 88%)" />
-                  <XAxis
-                    dataKey="category"
-                    tick={{ fontSize: 10, fill: "hsl(215, 16%, 47%)" }}
-                    axisLine={{ stroke: "hsl(214, 20%, 88%)" }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: "hsl(215, 16%, 47%)" }}
-                    axisLine={{ stroke: "hsl(214, 20%, 88%)" }}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(0, 0%, 100%)",
-                      border: "1px solid hsl(214, 20%, 88%)",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      color: "hsl(222, 47%, 11%)",
-                    }}
-                  />
-                  <Bar dataKey="current" fill="hsl(214, 20%, 80%)" radius={[4, 4, 0, 0]} name="Current" />
-                  <Bar dataKey="projected" fill="hsl(185, 72%, 38%)" radius={[4, 4, 0, 0]} name="Projected" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pie Chart */}
-        <Card className="border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">{t("analytics.filterEfficiency")}</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={4}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(0, 0%, 100%)",
-                      border: "1px solid hsl(214, 20%, 88%)",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                      color: "hsl(222, 47%, 11%)",
-                    }}
-                    formatter={(value: number) => `${value}%`}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: "11px", color: "hsl(215, 16%, 47%)" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {analyticsGroups.map((group) => (
+          <TabsContent key={group.id} value={group.id}>
+            <AnalyticsGroupPanel group={group} t={t} />
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 }
