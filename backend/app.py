@@ -36,7 +36,7 @@ def process_global_orders_route():
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True, 
             download_name=f"GlobalOrders-{datetime.datetime.now().strftime('%H%M%S')}.xlsx",
-        )
+        ), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -62,7 +62,7 @@ def process_mb52_route():
             as_attachment=True,
             download_name=f"MB52_Result.{ext}",
             mimetype=mimetype
-        )
+        ), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -85,8 +85,8 @@ def process_mb51_route():
             result_buffer,
             as_attachment=True, 
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            download_name=f"MB51_Filtered_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx"
-        )
+            download_name=f"MB51-Filtered-{datetime.datetime.now().strftime('%H%M%S')}.xlsx",
+        ), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

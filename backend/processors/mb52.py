@@ -40,7 +40,7 @@ def process_mb52(mb52_file):
             buf_8888 = io.BytesIO()
             combined_8888.to_excel(buf_8888, index=False, engine='openpyxl')
             buf_8888.seek(0)
-            output_mem_files["MB52_8888.xlsx"] = buf_8888
+            output_mem_files[f"MB52-8888-{datetime.now().strftime('%H%M%S')}.xlsx"] = buf_8888
 
         # --- Step 3: Handle Storage Location 9999 ---
         df_9999 = df[df["Storage Location"] == 9999]
@@ -54,7 +54,7 @@ def process_mb52(mb52_file):
             buf_9999 = io.BytesIO()
             grouped_9999.to_excel(buf_9999, index=False, engine='openpyxl')
             buf_9999.seek(0)
-            output_mem_files["MB52_9999.xlsx"] = buf_9999
+            output_mem_files[f"MB52-9999-{datetime.now().strftime('%H%M%S')}.xlsx"] = buf_9999
 
         # --- Final Packaging ---
         if len(output_mem_files) > 1:

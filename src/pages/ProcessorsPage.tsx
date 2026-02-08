@@ -207,7 +207,9 @@ export default function ProcessorsPage() {
                   const blob = await processMB51(files[0], Number(movementType));
                   
                   const arrayBuffer = await blob.arrayBuffer();
-                  const defaultName = `MB51_Filtered_${new Date().getTime()}.xlsx`;
+                  // only year and month
+                  const timestamp = new Date().toISOString().split('T')[0].slice(0, 7).replace('-', '');
+                  const defaultName = `MB51-Filtered-${timestamp}.xlsx`;
 
                   // Native Electron Save
                   await window.electronAPI.saveProcessedFile(arrayBuffer, defaultName);

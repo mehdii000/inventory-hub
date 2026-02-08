@@ -90,6 +90,9 @@ def process_mb51(mb51_file, movement_type):
         # Cleanup
         df = df.drop(rows_to_delete)
         
+        # Replace 'Storage Location' column that equals 1000 with 8888 and color it blue
+        df['Storage Location'] = df['Storage Location'].apply(lambda x: 8888 if x == 1000 else x)
+
         # Export to BytesIO
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
