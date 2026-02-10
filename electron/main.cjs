@@ -90,6 +90,7 @@ if (!isFirstInstance) {
   app.whenReady().then(() => {
     startPython();
     createWindow();
+    console.log(app.getVersion());
   });
 }
 

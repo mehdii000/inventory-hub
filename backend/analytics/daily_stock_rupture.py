@@ -36,54 +36,41 @@ def generate_stock_ruptures(excel_file):
         # Step 4: Identify Date Columns (Qté T)
         # Dates are on row 3 (index 2), Qté T is row 4 (index 3)
         full_df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
-        
-        if len(full_df) < 4:
-            raise ValueError("The Excel sheet has too few rows to process. Headers expected on row 4.")
-
-        header_row = full_df.iloc[3] # Column names
-        date_row = full_df.iloc[2]   # Date values
-        
-        # Extract indices of columns named "Qté T"
+        header_row = full_df.iloc[3] 
+        date_row = full_df.iloc[2]   
         qte_t_indices = [i for i, x in enumerate(header_row) if str(x).strip() == "Qté T"]
         
-        if not qte_t_indices:
-            raise ValueError("No 'Qté T' columns found in the expected header row.")
-
         results = {}
 
-        # Step 5: Iterate through days and calculate ruptures
         for idx in qte_t_indices:
+            # CHECK: If the entire column for this 'Qté T' is empty, skip it
+            current_column_data = df.iloc[:, idx]
+            if current_column_data.isna().all():
+                continue
+
             raw_date = date_row[idx]
             if pd.isna(raw_date):
                 continue
                 
-            # Formatting date to string safely
-            try:
-                date_key = str(raw_date).split(' ')[0]
-            except:
-                date_key = str(raw_date)
+            date_key = str(raw_date).split(' ')[0]
             
-            # Use .iloc to handle duplicate column names (multiple "Qté T")
-            stock_out_mask = (pd.to_numeric(df.iloc[:, idx], errors='coerce').fillna(0) == 0)
-            rupture_rows = df[stock_out_mask]
+            # Stock out = actual numeric 0
+            stock_out_mask = (pd.to_numeric(current_column_data, errors='coerce').fillna(0) == 0)
+            # Ensure we only count rows that weren't originally empty/NaN in this column
+            valid_data_mask = current_column_data.notna()
+            
+            rupture_rows = df[stock_out_mask & valid_data_mask]
             
             counts = {"Test": 0, "PDR": 0, "Other": 0}
-            
             for _, row in rupture_rows.iterrows():
                 row_type = str(row["Type"]).strip()
-                if row_type == "Test":
-                    counts["Test"] += 1
-                elif row_type == "PDR":
-                    counts["PDR"] += 1
+                if row_type in counts:
+                    counts[row_type] += 1
                 else:
                     counts["Other"] += 1
             
             results[date_key] = counts
 
         return results
-
     except Exception as e:
-        # Log it locally for the dev terminal
-        print(f"Processor Logic Error: {str(e)}")
-        # RE-RAISE so the Flask route catches the specific message
         raise e
