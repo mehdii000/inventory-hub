@@ -94,20 +94,30 @@ def process_mb51_route():
 @app.route('/processors/stock_ruptures', methods=['POST'])
 def stock_ruptures_route():
     try:
+        # Check if file exists in request
         if 'file' not in request.files:
-            return jsonify({'error': 'No file provided'}), 400
+            return jsonify({'error': 'No file part in the request (Expected key: "file")'}), 400
             
         file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'The selected file is empty.'}), 400
         
-        # Run processor
+        # Call the processor
+        # Any 'raise' inside generate_stock_ruptures will jump straight to the 'except' block below
         json_data = generate_stock_ruptures(file)
         
-        if json_data is None:
-            return jsonify({'error': 'Processing failed'}), 500
-            
         return jsonify(json_data), 200
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # We capture the message from the raised exception 'e'
+        error_message = str(e)
+        print(f"Flask Route caught error: {error_message}")
+        
+        return jsonify({
+            'error': error_message,
+            'type': type(e).__name__,
+            'status': 'failed'
+        }), 500
 
 if __name__ == '__main__':
     app.run(host='localhost', port=5454, debug=True, threaded=True)

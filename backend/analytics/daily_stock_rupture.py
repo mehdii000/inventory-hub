@@ -17,52 +17,56 @@ def generate_stock_ruptures(excel_file):
         # Step 2: Validate core columns
         core_columns = [
             "Code SAP", "que 9999 Actif", "que 8888 Actif", "Type", 
-            "Tot Cons. 2025", "TAN Consomation 2025", 
+            "Tot Cons. 2025 ", "TAN Consomation 2025", 
             "BKN Consomation 2025", "Criticité/article"
         ]
         
         for col in core_columns:
             if col not in df.columns:
-                raise ValueError(f"Required column '{col}' not found.")
+                raise ValueError(f"Required column '{col}' not found in sheet '{sheet_name}'.")
 
         # Step 3: Filtering
         # Filter 1: "que 9999 Actif" must not be empty
         df = df.dropna(subset=["que 9999 Actif"])
         
-        # Filter 2: "Tot Cons. 2025" must be > 0
-        df["Tot Cons. 2025"] = pd.to_numeric(df["Tot Cons. 2025"], errors='coerce').fillna(0)
-        df = df[df["Tot Cons. 2025"] > 0]
+        # Filter 2: "TAN Consomation 2025" must be > 0
+        df["TAN Consomation 2025"] = pd.to_numeric(df["TAN Consomation 2025"], errors='coerce').fillna(0)
+        df = df[df["TAN Consomation 2025"] > 0]
 
         # Step 4: Identify Date Columns (Qté T)
         # Dates are on row 3 (index 2), Qté T is row 4 (index 3)
-        # We need to find columns named "Qté T" and extract the date above them
         full_df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
+        
+        if len(full_df) < 4:
+            raise ValueError("The Excel sheet has too few rows to process. Headers expected on row 4.")
+
         header_row = full_df.iloc[3] # Column names
         date_row = full_df.iloc[2]   # Date values
         
         # Extract indices of columns named "Qté T"
         qte_t_indices = [i for i, x in enumerate(header_row) if str(x).strip() == "Qté T"]
         
+        if not qte_t_indices:
+            raise ValueError("No 'Qté T' columns found in the expected header row.")
+
         results = {}
 
         # Step 5: Iterate through days and calculate ruptures
         for idx in qte_t_indices:
-            # Get the date string from the row above
             raw_date = date_row[idx]
             if pd.isna(raw_date):
                 continue
                 
-            date_key = str(raw_date).split(' ')[0] # Format as YYYY-MM-DD
+            # Formatting date to string safely
+            try:
+                date_key = str(raw_date).split(' ')[0]
+            except:
+                date_key = str(raw_date)
             
-            # Map column index to our filtered dataframe
-            col_name = df.columns[idx]
-            
-            # Find rows where Qté T is 0
-            # We use .iloc because df columns might have duplicate names (multiple "Qté T")
+            # Use .iloc to handle duplicate column names (multiple "Qté T")
             stock_out_mask = (pd.to_numeric(df.iloc[:, idx], errors='coerce').fillna(0) == 0)
             rupture_rows = df[stock_out_mask]
             
-            # Initialize categories
             counts = {"Test": 0, "PDR": 0, "Other": 0}
             
             for _, row in rupture_rows.iterrows():
@@ -79,5 +83,7 @@ def generate_stock_ruptures(excel_file):
         return results
 
     except Exception as e:
-        print(f"Error in generate_stock_ruptures: {e}")
-        return None
+        # Log it locally for the dev terminal
+        print(f"Processor Logic Error: {str(e)}")
+        # RE-RAISE so the Flask route catches the specific message
+        raise e

@@ -3,6 +3,10 @@ import {
   Globe, Database, ClipboardList,
   FileSpreadsheet, GitMerge, Layers, CheckCircle,
   Filter, XCircle, ArrowRightLeft, Calendar, Calculator,
+  Search,
+  Clock,
+  Archive,
+  Edit3,
 } from "lucide-react";
 import { ProcessorCard } from "@/components/processors/ProcessorCard";
 import { ProcessingPipeline } from "@/components/processors/ProcessingPipeline";
@@ -21,44 +25,36 @@ const processors = {
   "global-orders": {
     icon: Globe,
     steps: [
-      { label: "Parse ME2N purchase order export", icon: FileSpreadsheet },
-      { label: "Parse All eBM Lotus data file", icon: FileSpreadsheet },
-      { label: "Cross-reference & match order entries", icon: GitMerge },
-      { label: "Consolidate into unified global orders", icon: Layers },
-      { label: "Validate & deduplicate results", icon: CheckCircle },
+      { label: "Filter ME2N for open delivery quantities", icon: Filter },
+      { label: "Parse LOTUS data and map 18 standard columns", icon: FileSpreadsheet },
+      { label: "Filter LOTUS for CC 47000 and unassigned POs", icon: Search },
+      { label: "Align column schemas and concatenate datasets", icon: GitMerge },
+      { label: "Aggregate total quantity by SAP article number", icon: Calculator },
     ],
-    output: "Consolidated Global Orders (.csv)",
+    output: "Consolidated Global Orders (.xlsx)",
   },
   "mb52": {
     icon: Database,
     steps: [
       { label: "Load MB52 warehouse stock data", icon: FileSpreadsheet },
-      { label: "Filter by plant & storage location", icon: Filter },
-      { label: "Remove zero-stock line items", icon: XCircle },
-      { label: "Aggregate quantities by material number", icon: Layers },
+      { label: "Merge and sum Storage Locations 1000 & 8888", icon: Layers },
+      { label: "Isolate Storage Location 9999 entries", icon: Filter },
+      { label: "Generate timestamped files for each group", icon: Clock },
+      { label: "Package multiple reports into ZIP archive", icon: Archive },
     ],
-    output: "Filtered Stock Report (.csv)",
+    output: "Split Stock Reports (.zip / .xlsx)",
   },
   "mb51": {
     icon: ClipboardList,
     getSteps: (mvt: string) => [
-      { label: "Load MB51 material documents", icon: FileSpreadsheet },
-      { label: `Filter by movement type (${mvt})`, icon: ArrowRightLeft },
-      { label: "Extract relevant date-range entries", icon: Calendar },
-      { label: "Summarize quantities by material", icon: Calculator },
+      { label: "Load MB51 documents and clean header text", icon: FileSpreadsheet },
+      { label: `Split data into ${mvt} and reversal (${Number(mvt) + 1}) groups`, icon: ArrowRightLeft },
+      { label: "Reconcile reversals with matching receipts", icon: CheckCircle },
+      { label: "Adjust partial quantities and local currency prices", icon: Calculator },
+      { label: "Relabel Storage Location 1000 to 8888", icon: Edit3 },
     ],
-    output: "Filtered Movement Report (.csv)",
-  },
-  "mb54": {
-    icon: ClipboardList,
-    getSteps: (mvt: string) => [
-      { label: "Load MB52 material documents", icon: FileSpreadsheet },
-      { label: `Filter by movement type (${mvt})`, icon: ArrowRightLeft },
-      { label: "Extract relevant date-range entries", icon: Calendar },
-      { label: "Summarize quantities by material", icon: Calculator },
-    ],
-    output: "Filtered MB54 Report (.csv)",
-  },
+    output: "Reconciled Movement Report (.xlsx)",
+  }
 };
 
 export default function ProcessorsPage() {
