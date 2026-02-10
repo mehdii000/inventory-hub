@@ -1,13 +1,17 @@
 import { useState } from "react";
 import {
   Construction, FileSpreadsheet, Lock, TrendingDown, Package,
-  BarChart3, Warehouse, Clock, ChevronRight,
+  BarChart3, Warehouse, Clock, ChevronRight, Play, Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { FileDropZone } from "@/components/processors/FileDropZone";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { fetchStockRuptures, type StockRuptureData } from "@/services/analyticsApi";
+import { StockRuptureChart } from "@/components/analytics/StockRuptureChart";
 
 /* ─── Analytics group definitions ─── */
 
@@ -16,6 +20,7 @@ interface AnalyticItem {
   titleKey: string;
   descriptionKey: string;
   icon: React.ElementType;
+  implemented?: boolean;
 }
 
 interface AnalyticsGroup {
@@ -40,6 +45,7 @@ const analyticsGroups: AnalyticsGroup[] = [
         titleKey: "analytics.placeholders.monthlyStockRupture.title",
         descriptionKey: "analytics.placeholders.monthlyStockRupture.description",
         icon: TrendingDown,
+        implemented: true,
       },
       {
         id: "stock-coverage",
@@ -85,7 +91,6 @@ function AnalyticPlaceholderCard({ item, t }: { item: AnalyticItem; t: (key: str
 
   return (
     <div className="group relative rounded-xl border border-border/60 bg-card p-5 transition-all hover:shadow-md hover:border-primary/20">
-      {/* Coming Soon ribbon */}
       <div className="absolute top-3 right-3">
         <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-wider gap-1 bg-muted text-muted-foreground">
           <Lock className="h-3 w-3" />
@@ -103,7 +108,6 @@ function AnalyticPlaceholderCard({ item, t }: { item: AnalyticItem; t: (key: str
         </div>
       </div>
 
-      {/* Subtle bottom indicator */}
       <div className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
         <ChevronRight className="h-3 w-3" />
         <span>{t("analytics.plannedFeature")}</span>
@@ -116,6 +120,32 @@ function AnalyticPlaceholderCard({ item, t }: { item: AnalyticItem; t: (key: str
 
 function AnalyticsGroupPanel({ group, t }: { group: AnalyticsGroup; t: (key: string) => string }) {
   const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [ruptureData, setRuptureData] = useState<StockRuptureData | null>(null);
+
+  const hasImplemented = group.items.some((i) => i.implemented);
+
+  const handleProcess = async () => {
+    if (!file) return;
+    setLoading(true);
+    setRuptureData(null);
+    try {
+      const data = await fetchStockRuptures(file);
+      if (!data || Object.keys(data).length === 0) {
+        toast.error("No rupture data found in the file.");
+        return;
+      }
+      setRuptureData(data);
+      toast.success("Stock rupture analysis complete.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process file.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const implementedItems = group.items.filter((i) => i.implemented);
+  const placeholderItems = group.items.filter((i) => !i.implemented);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -136,22 +166,61 @@ function AnalyticsGroupPanel({ group, t }: { group: AnalyticsGroup; t: (key: str
             {group.items.length} {group.items.length === 1 ? "analytic" : "analytics"} share this input
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <FileDropZone
             label={group.inputFileLabel}
             accept={group.accept}
             file={file}
             onFileSelect={setFile}
           />
+          {hasImplemented && (
+            <Button
+              onClick={handleProcess}
+              disabled={!file || loading}
+              className="w-full h-11 gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("processors.processing")}
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4" />
+                  {t("processors.process")}
+                </>
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
-      {/* Analytics cards grid */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {group.items.map((item) => (
-          <AnalyticPlaceholderCard key={item.id} item={item} t={t} />
-        ))}
-      </div>
+      {/* Implemented analytics results */}
+      {ruptureData && implementedItems.some((i) => i.id === "monthly-stock-rupture") && (
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-primary" />
+              {t("analytics.placeholders.monthlyStockRupture.title")}
+            </CardTitle>
+            <CardDescription className="text-xs">
+              {t("analytics.placeholders.monthlyStockRupture.description")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StockRuptureChart data={ruptureData} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Placeholder analytics cards grid */}
+      {placeholderItems.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {placeholderItems.map((item) => (
+            <AnalyticPlaceholderCard key={item.id} item={item} t={t} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -168,7 +237,6 @@ export default function AnalyticsPage() {
         <p className="text-sm text-muted-foreground mt-1">{t("analytics.subtitle")}</p>
       </div>
 
-      {/* Under Construction Banner */}
       <div className="flex items-center gap-3 rounded-lg border border-status-processing/30 bg-status-processing/5 px-4 py-3">
         <Construction className="h-5 w-5 text-status-processing shrink-0" />
         <div>
@@ -177,7 +245,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Tabbed groups */}
       <Tabs defaultValue={analyticsGroups[0].id} className="w-full">
         <TabsList className="mb-6 h-auto p-1 gap-1 bg-muted/60">
           {analyticsGroups.map((group) => (
