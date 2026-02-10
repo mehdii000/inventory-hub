@@ -7,6 +7,7 @@ import io
 from processors.global_orders import process_global_orders
 from processors.mb51 import process_mb51
 from processors.mb52 import process_mb52
+from analytics.daily_stock_rupture import generate_stock_ruptures
 
 app = Flask(__name__)
 CORS(app)
@@ -87,6 +88,24 @@ def process_mb51_route():
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             download_name=f"MB51-Filtered-{datetime.datetime.now().strftime('%H%M%S')}.xlsx",
         ), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/processors/stock_ruptures', methods=['POST'])
+def stock_ruptures_route():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+            
+        file = request.files['file']
+        
+        # Run processor
+        json_data = generate_stock_ruptures(file)
+        
+        if json_data is None:
+            return jsonify({'error': 'Processing failed'}), 500
+            
+        return jsonify(json_data), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
