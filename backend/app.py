@@ -7,7 +7,7 @@ import io
 from processors.global_orders import process_global_orders
 from processors.mb51 import process_mb51
 from processors.mb52 import process_mb52
-from analytics.daily_stock_rupture import generate_stock_ruptures
+from analytics.daily_stock_rupture import generate_combined_stock_ruptures
 
 app = Flask(__name__)
 CORS(app)
@@ -104,7 +104,7 @@ def stock_ruptures_route():
         
         # Call the processor
         # Any 'raise' inside generate_stock_ruptures will jump straight to the 'except' block below
-        json_data = generate_stock_ruptures(file)
+        json_data = generate_combined_stock_ruptures(file)
         
         return jsonify(json_data), 200
 
