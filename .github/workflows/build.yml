@@ -17,26 +17,6 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install Python Dependencies
-        run: |
-          pip install pyinstaller requests # Added requests for the updater
-          if (Test-Path "backend/requirements.txt") { pip install -r backend/requirements.txt }
-
-      - name: Build Python Updater
-        run: |
-          cd updater
-          python -m PyInstaller --noconsole --onefile --uac-admin updater.py
-
-      - name: Build Python Backend
-        run: |
-          cd backend
-          python -m PyInstaller --noconfirm --onedir --windowed app.py
-
       - name: Install Frontend Dependencies
         run: bun install
 
