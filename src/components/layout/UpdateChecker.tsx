@@ -50,12 +50,6 @@ export function UpdateChecker() {
     }
   }, []);
 
-  // Auto-check on mount
-  useEffect(() => {
-    const timer = setTimeout(checkForUpdate, 2000);
-    return () => clearTimeout(timer);
-  }, [checkForUpdate]);
-
   return (
     <>
       {/* Sidebar button */}

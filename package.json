@@ -30,15 +30,15 @@
     ],
     "extraResources": [
       {
-        "from": "backend/dist/app",
+        "from": "backend",
         "to": "backend",
         "filter": [
           "**/*"
         ]
       },
       {
-        "from": "updater/dist/updater.exe",
-        "to": "updater/updater.exe"
+        "from": "updater",
+        "to": "updater"
       }
     ],
     "win": {

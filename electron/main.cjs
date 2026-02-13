@@ -44,8 +44,9 @@ if (!isFirstInstance) {
       /**
        * PROD MODE: Runs the compiled executable from the resources folder.
        */
-      pyCommand = path.join(process.resourcesPath, "backend", "app.exe");
-      args = [];
+      pyCommand = process.platform === "win32" ? "python" : "python3";
+      const scriptPath = path.join(process.resourcesPath, "backend", "app.py"); 
+      args = [scriptPath];
       
       console.log(`[Prod] Executing binary: ${pyCommand}`);
     }
@@ -155,7 +156,7 @@ ipcMain.handle('get-app-version', () => {
 
 ipcMain.handle('check-for-update', async () => {
   try {
-    const currentVersion = app.getVersion(); // e.g., "1.0.0"
+    const currentVersion = app.getVersion();
     const response = await fetch('https://api.github.com/repos/mehdii000/inventory-hub/releases/latest', {
       headers: { 'User-Agent': 'Electron-App' } // GitHub API requires a User-Agent header
     });
@@ -176,7 +177,7 @@ ipcMain.handle('begin-update', async () => {
   if (isDev) {
     updaterPath = path.resolve(__dirname, "..", "updater", "dist", "updater.exe");
   } else {
-    updaterPath = path.resolve(process.resourcesPath, "updater", "updater.exe");
+    updaterPath = path.resolve(process.resourcesPath, "updater", "updater.py");
   }
 
   if (!fs.existsSync(updaterPath)) {
