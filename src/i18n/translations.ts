@@ -102,6 +102,18 @@ export const translations = {
       success: "Success",
       error: "Error",
     },
+    update: {
+      check: "Check for Updates",
+      checking: "Checking…",
+      available: "Update Available",
+      upToDate: "Up to Date",
+      installing: "Installing…",
+      error: "Update Failed",
+      dialogTitle: "Update Available",
+      dialogDescription: "A new version is available. Would you like to install it now? The application will restart after the update.",
+      later: "Later",
+      installNow: "Install Now",
+    },
   },
   fr: {
     nav: {
@@ -205,6 +217,18 @@ export const translations = {
       processing: "En cours",
       success: "Succès",
       error: "Erreur",
+    },
+    update: {
+      check: "Vérifier les mises à jour",
+      checking: "Vérification…",
+      available: "Mise à jour disponible",
+      upToDate: "À jour",
+      installing: "Installation…",
+      error: "Échec de la mise à jour",
+      dialogTitle: "Mise à jour disponible",
+      dialogDescription: "Une nouvelle version est disponible. Souhaitez-vous l'installer maintenant ? L'application redémarrera après la mise à jour.",
+      later: "Plus tard",
+      installNow: "Installer maintenant",
     },
   },
 } as const;
