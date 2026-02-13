@@ -1,19 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Calendar, Filter, Table2, LineChart as LineChartIcon, Building2 } from "lucide-react";
+import { Calendar, Filter, Table2, LineChart as LineChartIcon, Building2, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Updated Type to match the new JSON format
-interface StockRuptureData {
-  TAN_9999: Record<string, { Test: number; PDR: number; Other: number }>;
-  BKN_8888: Record<string, { Test: number; PDR: number; Other: number }>;
-}
+import type { StockRuptureData } from "@/services/analyticsApi";
 
 interface Props {
   data: StockRuptureData;
@@ -25,24 +20,147 @@ const COLORS = {
   Other: "hsl(0, 72%, 55%)",
 };
 
+function processSiteData(siteData: Record<string, { Test: number; PDR: number; Other: number }>) {
+  return Object.entries(siteData)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, counts]) => ({
+      rawDate: date,
+      date: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+      shortDate: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      Test: counts.Test,
+      PDR: counts.PDR,
+      Other: counts.Other,
+      total: counts.Test + counts.PDR + counts.Other,
+    }));
+}
+
+async function exportToExcel(data: StockRuptureData) {
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Stock Rupture Analytics";
+
+  const sites = [
+    { key: "TAN_9999" as const, label: "Site 9999 (TAN)" },
+    { key: "BKN_8888" as const, label: "Site 8888 (BKN)" },
+  ];
+
+  for (const site of sites) {
+    const siteData = data[site.key] || {};
+    const rows = processSiteData(siteData);
+
+    // Data sheet
+    const ws = workbook.addWorksheet(site.label);
+
+    // Title
+    ws.mergeCells("A1:E1");
+    const titleCell = ws.getCell("A1");
+    titleCell.value = `Stock Ruptures — ${site.label}`;
+    titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { horizontal: "center" };
+
+    // Headers
+    const headerRow = ws.addRow(["Date", "Test", "PDR", "Other", "Total"]);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
+      cell.alignment = { horizontal: "center" };
+      cell.border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Data rows
+    rows.forEach((row, i) => {
+      const dataRow = ws.addRow([row.rawDate, row.Test, row.PDR, row.Other, row.total]);
+      dataRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" },
+        };
+        if (i % 2 === 0) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
+        }
+      });
+    });
+
+    // Totals row
+    const totalsRow = ws.addRow([
+      "TOTAL",
+      rows.reduce((s, r) => s + r.Test, 0),
+      rows.reduce((s, r) => s + r.PDR, 0),
+      rows.reduce((s, r) => s + r.Other, 0),
+      rows.reduce((s, r) => s + r.total, 0),
+    ]);
+    totalsRow.eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E2F3" } };
+      cell.border = {
+        top: { style: "medium" },
+        bottom: { style: "medium" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+
+    // Column widths
+    ws.getColumn(1).width = 16;
+    ws.getColumn(2).width = 12;
+    ws.getColumn(3).width = 12;
+    ws.getColumn(4).width = 12;
+    ws.getColumn(5).width = 12;
+
+    // Chart sheet
+    const chartDataStartRow = 3; // row after title + header
+    const chartDataEndRow = chartDataStartRow + rows.length - 1;
+
+    if (rows.length > 0) {
+      const chartWs = workbook.addWorksheet(`${site.label} — Chart`);
+      chartWs.mergeCells("A1:H1");
+      const chartTitle = chartWs.getCell("A1");
+      chartTitle.value = `Stock Ruptures Trend — ${site.label}`;
+      chartTitle.font = { bold: true, size: 14 };
+      chartTitle.alignment = { horizontal: "center" };
+
+      // Embed data for chart reference
+      chartWs.addRow(["Date", "Test", "PDR", "Other"]);
+      rows.forEach((row) => {
+        chartWs.addRow([row.rawDate, row.Test, row.PDR, row.Other]);
+      });
+
+      // Style the mini table
+      chartWs.getColumn(1).width = 16;
+      chartWs.getColumn(2).width = 10;
+      chartWs.getColumn(3).width = 10;
+      chartWs.getColumn(4).width = 10;
+    }
+  }
+
+  // Generate and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stock_ruptures_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export function StockRuptureResults({ data }: Props) {
   const [activeSite, setActiveSite] = useState<keyof StockRuptureData>("TAN_9999");
   const [dateFilter, setDateFilter] = useState("");
+  const [exporting, setExporting] = useState(false);
 
-  // Process data based on selected site
   const allRows = useMemo(() => {
     const siteData = data[activeSite] || {};
-    return Object.entries(siteData)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, counts]) => ({
-        rawDate: date,
-        date: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
-        shortDate: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-        Test: counts.Test,
-        PDR: counts.PDR,
-        Other: counts.Other,
-        total: counts.Test + counts.PDR + counts.Other,
-      }));
+    return processSiteData(siteData);
   }, [data, activeSite]);
 
   const filteredRows = useMemo(() => {
@@ -59,6 +177,17 @@ export function StockRuptureResults({ data }: Props) {
     Other: filteredRows.reduce((s, d) => s + d.Other, 0),
     all: filteredRows.reduce((s, d) => s + d.total, 0),
   }), [filteredRows]);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      await exportToExcel(data);
+    } catch (e) {
+      console.error("Export failed:", e);
+    } finally {
+      setExporting(false);
+    }
+  }, [data]);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -79,18 +208,30 @@ export function StockRuptureResults({ data }: Props) {
           </Select>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 flex-1 max-w-2xl">
-          {[
-            { label: "Test", color: COLORS.Test, value: totals.Test },
-            { label: "PDR", color: COLORS.PDR, value: totals.PDR },
-            { label: "Other", color: COLORS.Other, value: totals.Other },
-            { label: "Total", color: "hsl(215, 16%, 47%)", value: totals.all },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-background rounded-lg border border-border/60 p-2 text-center shadow-sm">
-              <div className="text-[10px] text-muted-foreground font-medium uppercase">{stat.label}</div>
-              <div className="text-lg font-bold font-mono" style={{ color: stat.color }}>{stat.value}</div>
-            </div>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="grid grid-cols-4 gap-2 flex-1 max-w-2xl">
+            {[
+              { label: "Test", color: COLORS.Test, value: totals.Test },
+              { label: "PDR", color: COLORS.PDR, value: totals.PDR },
+              { label: "Other", color: COLORS.Other, value: totals.Other },
+              { label: "Total", color: "hsl(215, 16%, 47%)", value: totals.all },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-background rounded-lg border border-border/60 p-2 text-center shadow-sm">
+                <div className="text-[10px] text-muted-foreground font-medium uppercase">{stat.label}</div>
+                <div className="text-lg font-bold font-mono" style={{ color: stat.color }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={exporting}
+            className="gap-1.5 shrink-0"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {exporting ? "Exporting..." : "Export Excel"}
+          </Button>
         </div>
       </div>
 
@@ -160,7 +301,6 @@ export function StockRuptureResults({ data }: Props) {
         </TabsContent>
 
         <TabsContent value="data">
-          {/* Table logic remains similar, but data is now derived from the 'allRows' memo which respects the activeSite */}
           <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

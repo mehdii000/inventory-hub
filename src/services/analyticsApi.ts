@@ -2,12 +2,17 @@
  * Analytics API service — calls Flask backend for analytics processing.
  */
 
-export interface StockRuptureData {
+export interface StockRuptureSiteData {
   [date: string]: {
     Test: number;
     PDR: number;
     Other: number;
   };
+}
+
+export interface StockRuptureData {
+  TAN_9999: StockRuptureSiteData;
+  BKN_8888: StockRuptureSiteData;
 }
 
 export async function fetchStockRuptures(file: File): Promise<StockRuptureData> {
