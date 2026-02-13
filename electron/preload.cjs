@@ -7,10 +7,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveProcessedFile: (arrayBuffer, fileName) => {
         ipcRenderer.invoke('dialog:saveFile', arrayBuffer, fileName)
   },
-  checkForUpdate: () => {
-    ipcRenderer.invoke('check-for-update');
-  },
-  beginUpdate: () => {
-    ipcRenderer.invoke('begin-update');
-  }
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
+  beginUpdate: () => ipcRenderer.invoke('begin-update')
 });

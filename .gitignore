@@ -11,6 +11,7 @@ node_modules
 dist
 dist_electron
 backend/build
+updater/build
 backend/__pycache__
 dist-ssr
 *.local

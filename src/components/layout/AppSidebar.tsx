@@ -16,8 +16,7 @@ import {
   SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
-
-const APP_VERSION = "1.0.0";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { titleKey: "nav.processors", url: "/", icon: Cog },
@@ -28,8 +27,19 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const { t, language, setLanguage } = useLanguage();
+  const [version, setVersion] = useState<string>("...");
   const collapsed = state === "collapsed";
 
+  useEffect(() => {
+    const fetchVersion = async () => {
+      if (window.electronAPI?.getAppVersion) {
+        const v = await window.electronAPI.getAppVersion();
+        setVersion(v);
+      }
+    };
+    fetchVersion();
+  }, []);
+  
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 py-5">
@@ -86,18 +96,17 @@ export function AppSidebar() {
           )}
         </button>
 
-
         <UpdateChecker />
 
-        {/* App Version */}
+        {/* App Version - Now using dynamic version state */}
         <div className="flex items-center gap-3 px-3 py-2">
           {!collapsed ? (
             <span className="text-[10px] font-mono text-muted-foreground/60 tracking-wide">
-              {t("nav.version")} {APP_VERSION}
+              {t("nav.version")} {version}
             </span>
           ) : (
             <span className="text-[9px] font-mono text-muted-foreground/50 w-full text-center">
-              {APP_VERSION}
+              v{version}
             </span>
           )}
         </div>

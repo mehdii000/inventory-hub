@@ -44,13 +44,14 @@ if (!isFirstInstance) {
       /**
        * PROD MODE: Runs the compiled executable from the resources folder.
        */
-      pyCommand = path.join(process.resourcesPath, "backend", process.platform === "win32" ? "app.exe" : "app");
+      pyCommand = path.join(process.resourcesPath, "backend", "app.exe");
       args = [];
       
       console.log(`[Prod] Executing binary: ${pyCommand}`);
     }
 
     pyProc = spawn(pyCommand, args, { 
+      detached: false,
       windowsHide: true,
       stdio: "inherit",
       shell: isDev, // Run as a shell command in dev to find 'python' easily
@@ -91,6 +92,7 @@ if (!isFirstInstance) {
     startPython();
     createWindow();
     console.log(app.getVersion());
+    console.log(app.getAppPath());
   });
 }
 
@@ -135,10 +137,60 @@ ipcMain.handle('dialog:saveFile', async (event, arrayBuffer, fileName) => {
   return false; // User cancelled
 });
 
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('check-for-update', async () => {
-  return true;
+  try {
+    const currentVersion = app.getVersion(); // e.g., "1.0.0"
+    const response = await fetch('https://api.github.com/repos/mehdii000/inventory-hub/releases/latest', {
+      headers: { 'User-Agent': 'Electron-App' } // GitHub API requires a User-Agent header
+    });
+    if (!response.ok) throw new Error('GitHub request failed');
+    const data = await response.json();
+    const latestVersion = data.tag_name.replace(/^v/, '');
+    return latestVersion !== currentVersion;
+    
+  } catch (error) {
+    console.error("Update check failed:", error);
+    return false; // Fail silently to the user
+  }
 });
 
 ipcMain.handle('begin-update', async () => {
-  console.log("starting update");
+  // Use path.resolve to get the absolute clean path
+  let updaterPath;
+  if (isDev) {
+    updaterPath = path.resolve(__dirname, "..", "updater", "dist", "updater.exe");
+  } else {
+    updaterPath = path.resolve(process.resourcesPath, "updater", "updater.exe");
+  }
+
+  if (!fs.existsSync(updaterPath)) {
+    console.error("Updater not found!");
+    return;
+  }
+
+  console.log("Launching updater at:", updaterPath);
+
+  try {
+    const child = spawn(updaterPath, [], {
+      detached: true,
+      stdio: 'ignore',
+      shell: true,
+      windowsHide: false // Set to false temporarily to see if it even starts
+    });
+
+    child.on('error', (err) => {
+      console.error("Failed to start updater process:", err);
+    });
+
+    child.unref();
+    setTimeout(() => {
+      app.quit();
+    }, 500);
+  } catch (error) {
+    console.error("Spawn error:", error);
+  }
 });

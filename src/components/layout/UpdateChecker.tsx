@@ -16,25 +16,16 @@ import { Badge } from "@/components/ui/badge";
 
 type UpdateStatus = "idle" | "checking" | "available" | "not-available" | "updating" | "error";
 
-function getElectronAPI() {
-  return (window as any).electronAPI as
-    | { isElectron: boolean; checkForUpdate: () => Promise<boolean>; beginUpdate: () => Promise<void> }
-    | undefined;
-}
-
 export function UpdateChecker() {
   const { t } = useLanguage();
   const [status, setStatus] = useState<UpdateStatus>("idle");
   const [showDialog, setShowDialog] = useState(false);
 
-  const api = getElectronAPI();
-  const isElectron = api?.isElectron === true;
-
   const checkForUpdate = useCallback(async () => {
-    if (!api) return;
     setStatus("checking");
     try {
-      const updateAvailable = await api.checkForUpdate();
+      const updateAvailable = await window.electronAPI.checkForUpdate();
+      console.log("Found update? " + updateAvailable);
       if (updateAvailable) {
         setStatus("available");
         setShowDialog(true);
@@ -46,29 +37,24 @@ export function UpdateChecker() {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 3000);
     }
-  }, [api]);
+  }, []);
 
   const beginUpdate = useCallback(async () => {
-    if (!api) return;
     setShowDialog(false);
     setStatus("updating");
     try {
-      await api.beginUpdate();
+      window.electronAPI.beginUpdate()
     } catch {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 3000);
     }
-  }, [api]);
+  }, []);
 
   // Auto-check on mount
   useEffect(() => {
-    if (isElectron) {
-      const timer = setTimeout(checkForUpdate, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isElectron, checkForUpdate]);
-
-  if (!isElectron) return null;
+    const timer = setTimeout(checkForUpdate, 2000);
+    return () => clearTimeout(timer);
+  }, [checkForUpdate]);
 
   return (
     <>

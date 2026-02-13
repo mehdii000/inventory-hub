@@ -1,4 +1,4 @@
-name: Build Windows and Linux
+name: Build Windows
 on:
   push:
     tags:
@@ -6,11 +6,9 @@ on:
 
 jobs:
   release:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        # windows-latest creates the Windows .exe
-        os: [windows-latest]
+    runs-on: windows-latest
+    permissions:
+      contents: write # Crucial for creating releases
 
     steps:
       - name: Checkout Code
@@ -24,20 +22,31 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install Python Dependencies
+        run: |
+          pip install pyinstaller requests # Added requests for the updater
+          if (Test-Path "backend/requirements.txt") { pip install -r backend/requirements.txt }
+
+      - name: Build Python Updater
+        run: |
+          cd updater
+          python -m PyInstaller --noconsole --onefile --uac-admin updater.py
+
       - name: Build Python Backend
         run: |
-            pip install pyinstaller -r backend/requirements.txt
-            cd backend && python -m PyInstaller --noconfirm --onedir --windowed app.py
+          cd backend
+          python -m PyInstaller --noconfirm --onedir --windowed app.py
 
-      - name: Build Electron App
-        run: |
-          bun install
-          bun run electron:build
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Frontend Dependencies
+        run: bun install
 
-      - name: Publish to GitHub Releases
+      - name: Build Vite Assets
+        run: bun run build
+
+      - name: Build and Publish Electron App
         uses: samuelmeuli/action-electron-builder@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # This action runs 'electron-builder' automatically
+          # It will pick up the files built in previous steps
           release: true
