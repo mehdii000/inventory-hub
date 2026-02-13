@@ -10,7 +10,7 @@ from threading import Thread
 # --- CONFIGURATION ---
 REPO = "mehdii000/inventory-hub"
 GITHUB_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
-EXE_NAME = "InventoryHub.exe" 
+EXE_NAME = "StockSync.exe" 
 
 class UpdaterApp:
     def __init__(self, root):
