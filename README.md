@@ -1,7 +1,7 @@
 # StockSync
 
 <p align="center">
-    <img width="1768" height="363" alt="image" src="https://github.com/user-attachments/assets/a4e910fb-0640-46af-9fa8-965e04ef403e" />
+    <img width="1768" height="363" alt="image (1)" src="https://github.com/user-attachments/assets/4a90ad7c-591a-455d-adb7-51cc0d4a6ba6" />
 </p>
 
 StockSync is a data processor and analytics engine tailored specifically for proprietary inventory management methods, but
