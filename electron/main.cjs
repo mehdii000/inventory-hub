@@ -134,3 +134,11 @@ ipcMain.handle('dialog:saveFile', async (event, arrayBuffer, fileName) => {
   }
   return false; // User cancelled
 });
+
+ipcMain.handle('check-for-update', async () => {
+  return true;
+});
+
+ipcMain.handle('begin-update', async () => {
+  console.log("starting update");
+});
