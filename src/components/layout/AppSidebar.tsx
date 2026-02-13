@@ -1,6 +1,7 @@
 import { Cog, History, BarChart3, Globe } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { UpdateChecker } from "@/components/layout/UpdateChecker";
 import {
   Sidebar,
   SidebarContent,
@@ -84,6 +85,9 @@ export function AppSidebar() {
             </span>
           )}
         </button>
+
+
+        <UpdateChecker />
 
         {/* App Version */}
         <div className="flex items-center gap-3 px-3 py-2">
