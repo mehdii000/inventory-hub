@@ -1,17 +1,8 @@
 # StockSync
 
-StockSync is a high-performance data processor and analytics generator desktop application.
-
-## 🚀 Quick Start
-
-To get the development environment up and running, follow these steps:
-
-### 1. Build Python Dependencies
-
-First, ensure the Python components are compiled and ready:
-
-```bash
-bun build:py
+StockSync is a data processor and analytics engine tailored specifically for proprietary inventory management methods, but
+due to my personnal love to open source, i have made it public in hopes that it might help or inspire someone or something.
+(free github actions might also be a strong reason)
 
 ```
 
@@ -29,7 +20,7 @@ bun electron:dev
 **For Production Build:**
 
 ```bash
-bun electron:build
+bun build:all
 
 ```
 
