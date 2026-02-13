@@ -1,5 +1,9 @@
 # StockSync
 
+<p align="center">
+    <img width="1768" height="363" alt="image (1)" src="https://github.com/user-attachments/assets/4a90ad7c-591a-455d-adb7-51cc0d4a6ba6" />
+</p>
+
 StockSync is a data processor and analytics engine tailored specifically for proprietary inventory management methods, but
 due to my personnal love to open source, i have made it public in hopes that it might help or inspire someone or something.
 (free github actions might also be a strong reason)
