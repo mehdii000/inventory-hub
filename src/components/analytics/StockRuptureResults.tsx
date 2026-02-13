@@ -3,7 +3,8 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Calendar, Filter, Table2, LineChart as LineChartIcon, Building2, Download } from "lucide-react";
+import { useCurrentPng } from "recharts-to-png";
+import { Table2, LineChart as LineChartIcon, Building2, Download, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,9 @@ const COLORS = {
   Other: "hsl(0, 72%, 55%)",
 };
 
+// --- HELPER: Process Data ---
 function processSiteData(siteData: Record<string, { Test: number; PDR: number; Other: number }>) {
-  return Object.entries(siteData)
+  return Object.entries(siteData || {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, counts]) => ({
       rawDate: date,
@@ -34,300 +36,280 @@ function processSiteData(siteData: Record<string, { Test: number; PDR: number; O
     }));
 }
 
-async function exportToExcel(data: StockRuptureData) {
-  const ExcelJS = await import("exceljs");
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Stock Rupture Analytics";
-
-  const sites = [
-    { key: "TAN_9999" as const, label: "Site 9999 (TAN)" },
-    { key: "BKN_8888" as const, label: "Site 8888 (BKN)" },
-  ];
-
-  for (const site of sites) {
-    const siteData = data[site.key] || {};
-    const rows = processSiteData(siteData);
-
-    // Data sheet
-    const ws = workbook.addWorksheet(site.label);
-
-    // Title
-    ws.mergeCells("A1:E1");
-    const titleCell = ws.getCell("A1");
-    titleCell.value = `Stock Ruptures — ${site.label}`;
-    titleCell.font = { bold: true, size: 14 };
-    titleCell.alignment = { horizontal: "center" };
-
-    // Headers
-    const headerRow = ws.addRow(["Date", "Test", "PDR", "Other", "Total"]);
-    headerRow.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } };
-      cell.alignment = { horizontal: "center" };
-      cell.border = {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Data rows
-    rows.forEach((row, i) => {
-      const dataRow = ws.addRow([row.rawDate, row.Test, row.PDR, row.Other, row.total]);
-      dataRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin" },
-          bottom: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-        };
-        if (i % 2 === 0) {
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
-        }
-      });
-    });
-
-    // Totals row
-    const totalsRow = ws.addRow([
-      "TOTAL",
-      rows.reduce((s, r) => s + r.Test, 0),
-      rows.reduce((s, r) => s + r.PDR, 0),
-      rows.reduce((s, r) => s + r.Other, 0),
-      rows.reduce((s, r) => s + r.total, 0),
-    ]);
-    totalsRow.eachCell((cell) => {
-      cell.font = { bold: true };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9E2F3" } };
-      cell.border = {
-        top: { style: "medium" },
-        bottom: { style: "medium" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    });
-
-    // Column widths
-    ws.getColumn(1).width = 16;
-    ws.getColumn(2).width = 12;
-    ws.getColumn(3).width = 12;
-    ws.getColumn(4).width = 12;
-    ws.getColumn(5).width = 12;
-
-    // Chart sheet
-    const chartDataStartRow = 3; // row after title + header
-    const chartDataEndRow = chartDataStartRow + rows.length - 1;
-
-    if (rows.length > 0) {
-      const chartWs = workbook.addWorksheet(`${site.label} — Chart`);
-      chartWs.mergeCells("A1:H1");
-      const chartTitle = chartWs.getCell("A1");
-      chartTitle.value = `Stock Ruptures Trend — ${site.label}`;
-      chartTitle.font = { bold: true, size: 14 };
-      chartTitle.alignment = { horizontal: "center" };
-
-      // Embed data for chart reference
-      chartWs.addRow(["Date", "Test", "PDR", "Other"]);
-      rows.forEach((row) => {
-        chartWs.addRow([row.rawDate, row.Test, row.PDR, row.Other]);
-      });
-
-      // Style the mini table
-      chartWs.getColumn(1).width = 16;
-      chartWs.getColumn(2).width = 10;
-      chartWs.getColumn(3).width = 10;
-      chartWs.getColumn(4).width = 10;
-    }
-  }
-
-  // Generate and download
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `stock_ruptures_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 export function StockRuptureResults({ data }: Props) {
   const [activeSite, setActiveSite] = useState<keyof StockRuptureData>("TAN_9999");
   const [dateFilter, setDateFilter] = useState("");
-  const [exporting, setExporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const allRows = useMemo(() => {
+  // Hook for chart capture
+  const [getPng, {ref: chartRef }] = useCurrentPng({});
+
+  const currentRows = useMemo(() => {
     const siteData = data[activeSite] || {};
-    return processSiteData(siteData);
-  }, [data, activeSite]);
+    const processed = processSiteData(siteData);
+    if (!dateFilter) return processed;
+    return processed.filter(r => r.rawDate.includes(dateFilter.toLowerCase()));
+  }, [data, activeSite, dateFilter]);
 
-  const filteredRows = useMemo(() => {
-    if (!dateFilter) return allRows;
-    const q = dateFilter.toLowerCase();
-    return allRows.filter(
-      (r) => r.rawDate.includes(q) || r.date.toLowerCase().includes(q)
-    );
-  }, [allRows, dateFilter]);
-
-  const totals = useMemo(() => ({
-    Test: filteredRows.reduce((s, d) => s + d.Test, 0),
-    PDR: filteredRows.reduce((s, d) => s + d.PDR, 0),
-    Other: filteredRows.reduce((s, d) => s + d.Other, 0),
-    all: filteredRows.reduce((s, d) => s + d.total, 0),
-  }), [filteredRows]);
-
-  const handleExport = useCallback(async () => {
-    setExporting(true);
+  // --- EXPORT 1: PNG Image Only ---
+  const handleExportPng = useCallback(async () => {
+    setIsExporting(true);
     try {
-      await exportToExcel(data);
+      // 1. Get the container from the working Ref
+      const container = chartRef.current?.container;
+      const svgElement = container?.querySelector('svg');
+
+      if (!svgElement) throw new Error("SVG not found");
+
+      // 2. CLONE the SVG so we don't mess up the UI while processing
+      const clonedSvg = svgElement.cloneNode(true) as SVGElement;
+
+      // 3. FIX COLORS: Copy computed styles to inline attributes
+      // This ensures that 'hsl(...)' colors defined in CSS are hardcoded into the export
+      const copyStyles = (source: Element, target: Element) => {
+        const sourceStyles = window.getComputedStyle(source);
+        
+        // Copy essential visual properties
+        const props = ['fill', 'stroke', 'stroke-width', 'font-family', 'font-size', 'opacity'];
+        props.forEach(prop => {
+          const value = sourceStyles.getPropertyValue(prop);
+          if (value) target.setAttribute(prop, value);
+        });
+
+        // Recurse through children (to fix lines, dots, and legend text)
+        for (let i = 0; i < source.children.length; i++) {
+          copyStyles(source.children[i], target.children[i]);
+        }
+      };
+
+      copyStyles(svgElement, clonedSvg);
+
+      // 4. Serialize the "Fixed" SVG
+      const serializer = new XMLSerializer();
+      const source = serializer.serializeToString(clonedSvg);
+
+      // 5. Render to Canvas (Higher Quality)
+      const canvas = document.createElement("canvas");
+      const bbox = svgElement.getBoundingClientRect();
+      const scale = 2; // High DPI
+      canvas.width = bbox.width * scale;
+      canvas.height = bbox.height * scale;
+      
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const img = new Image();
+      const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = async () => {
+        // Background and Scaling
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+
+        const pngData = canvas.toDataURL("image/png");
+        const fileName = `Chart_${activeSite}_${new Date().toISOString().slice(0, 10)}.png`;
+        
+        await window.electronAPI.saveProcessedFile(pngData, fileName);
+        
+        URL.revokeObjectURL(url);
+        setIsExporting(false);
+      };
+
+      img.src = url;
     } catch (e) {
       console.error("Export failed:", e);
+      setIsExporting(false);
+    }
+  }, [activeSite, chartRef]);
+
+  // --- EXPORT 2: Excel with 2 Sheets ---
+  const handleExportExcel = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      
+      const sites = [
+        { key: "TAN_9999" as const, label: "Site 9999 (TAN)" },
+        { key: "BKN_8888" as const, label: "Site 8888 (BKN)" },
+      ];
+
+      sites.forEach(site => {
+        const ws = workbook.addWorksheet(site.label);
+        const rows = processSiteData(data[site.key]);
+
+        // 1. Set Column Definitions (with better widths)
+        ws.columns = [
+          { key: "date", width: 22 },
+          { key: "test", width: 15 },
+          { key: "pdr", width: 15 },
+          { key: "other", width: 15 },
+          { key: "total", width: 18 },
+        ];
+
+        // 2. Add Aesthetic Header Title
+        ws.mergeCells("A1:E1");
+        const titleRow = ws.getCell("A1");
+        titleRow.value = `STOCK RUPTURE: ${site.label}, YEAR: ${new Date().getFullYear()} MONTH: ${new Date().toLocaleString('default', { month: 'long' })}`;
+        titleRow.font = { name: 'Arial Black', size: 14, color: { argb: 'FF1E293B' } };
+        titleRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        ws.getRow(1).height = 30;
+
+        // 3. Add Table Headers (Row 3)
+        const headerRow = ws.addRow(["DATE", "TEST", "PDR", "OTHER", "GRAND TOTAL"]);
+        headerRow.height = 20;
+
+        // Style the Header Row
+        headerRow.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF334155' } // Slate-700
+          };
+          cell.font = {
+            bold: true,
+            color: { argb: 'FFFFFFFF' },
+            size: 11
+          };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.border = {
+            bottom: { style: 'thin', color: { argb: 'FF000000' } }
+          };
+        });
+
+        // 4. Add Data Rows with Zebra Striping
+        rows.forEach((r, index) => {
+          const row = ws.addRow([r.rawDate, r.Test, r.PDR, r.Other, r.total]);
+          
+          // Zebra Striping: Light blue-grey for even rows
+          if (index % 2 === 0) {
+            row.eachCell(cell => {
+              cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFF1F5F9' } // Slate-50
+              };
+            });
+          }
+
+          // Cell Alignment & Font
+          row.eachCell((cell, colNumber) => {
+            cell.alignment = { horizontal: colNumber === 1 ? 'left' : 'center' };
+            cell.font = { name: 'Segoe UI', size: 10 };
+            
+            // Bold the total column
+            if (colNumber === 5) {
+              cell.font = { bold: true };
+            }
+          });
+        });
+
+        // 5. Add a Border around the whole data set
+        ws.getRow(rows.length + 3).border = {
+          bottom: { style: 'medium', color: { argb: 'FF334155' } }
+        };
+
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileName = `Stock_Rupture_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      await window.electronAPI.saveProcessedFile(buffer, fileName);
+      
+    } catch (e) {
+      console.error("Excel Export failed", e);
     } finally {
-      setExporting(false);
+      setIsExporting(false);
     }
   }, [data]);
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Site Selector & Summary Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl border border-border/40">
-        <div className="space-y-1">
-          <label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground flex items-center gap-1">
-            <Building2 className="h-3 w-3" /> Select Site
-          </label>
-          <Select value={activeSite} onValueChange={(v) => setActiveSite(v as keyof StockRuptureData)}>
-            <SelectTrigger className="w-[180px] h-9 bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TAN_9999">Site 9999 (TAN)</SelectItem>
-              <SelectItem value="BKN_8888">Site 8888 (BKN)</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="space-y-4">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border">
+        <div className="flex items-center gap-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-bold uppercase text-muted-foreground flex items-center gap-1">
+              <Building2 className="h-3 w-3" /> Site
+            </span>
+            <Select value={activeSite} onValueChange={(v: never) => setActiveSite(v)}>
+              <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TAN_9999">Site 9999 (TAN)</SelectItem>
+                <SelectItem value="BKN_8888">Site 8888 (BKN)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Input 
+            placeholder="Filter dates..." 
+            value={dateFilter} 
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="h-9 w-40 mt-5"
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="grid grid-cols-4 gap-2 flex-1 max-w-2xl">
-            {[
-              { label: "Test", color: COLORS.Test, value: totals.Test },
-              { label: "PDR", color: COLORS.PDR, value: totals.PDR },
-              { label: "Other", color: COLORS.Other, value: totals.Other },
-              { label: "Total", color: "hsl(215, 16%, 47%)", value: totals.all },
-            ].map((stat) => (
-              <div key={stat.label} className="bg-background rounded-lg border border-border/60 p-2 text-center shadow-sm">
-                <div className="text-[10px] text-muted-foreground font-medium uppercase">{stat.label}</div>
-                <div className="text-lg font-bold font-mono" style={{ color: stat.color }}>{stat.value}</div>
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            disabled={exporting}
-            className="gap-1.5 shrink-0"
-          >
-            <Download className="h-3.5 w-3.5" />
-            {exporting ? "Exporting..." : "Export Excel"}
-          </Button>
-        </div>
+        <Button onClick={handleExportExcel} disabled={isExporting} className="gap-2">
+          <Download className="h-4 w-4" /> Export All (Excel)
+        </Button>
       </div>
 
-      <Tabs defaultValue="chart" className="w-full">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <TabsList className="h-9 p-1 bg-muted/60">
-            <TabsTrigger value="chart" className="gap-1.5 text-xs px-3">
-              <LineChartIcon className="h-3.5 w-3.5" /> Chart
-            </TabsTrigger>
-            <TabsTrigger value="data" className="gap-1.5 text-xs px-3">
-              <Table2 className="h-3.5 w-3.5" /> Data
-            </TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="chart">
+        <TabsList className="mb-4">
+          <TabsTrigger value="chart" className="gap-2"><LineChartIcon className="h-4 w-4" /> Chart View</TabsTrigger>
+          <TabsTrigger value="data" className="gap-2"><Table2 className="h-4 w-4" /> Data Table</TabsTrigger>
+        </TabsList>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Filter by date..."
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="h-8 w-44 text-xs"
-            />
-          </div>
-        </div>
-
-        <TabsContent value="chart">
-          <div className="rounded-xl border border-border/60 bg-card p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h4 className="text-sm font-semibold text-foreground">Stock Ruptures Trend</h4>
-                <p className="text-[11px] text-muted-foreground italic">Current View: {activeSite}</p>
-              </div>
-              <span className="text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
-                {filteredRows.length} Days
-              </span>
+        <TabsContent value="chart" className="space-y-4">
+          <div className="p-6 bg-card border rounded-xl relative">
+            <div className="h-[350px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart ref={chartRef} data={currentRows} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="shortDate" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line isAnimationActive={false} type="monotone" dataKey="Test" stroke={COLORS.Test} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line isAnimationActive={false} type="monotone" dataKey="PDR" stroke={COLORS.PDR} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line isAnimationActive={false} type="monotone" dataKey="Other" stroke={COLORS.Other} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={filteredRows}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(214, 20%, 92%)" />
-                <XAxis
-                  dataKey="shortDate"
-                  tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "hsl(215, 16%, 47%)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "white",
-                    border: "1px solid hsl(214, 20%, 88%)",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} iconType="circle" />
-                <Line type="monotone" dataKey="Test" stroke={COLORS.Test} strokeWidth={2.5} dot={{ r: 4, strokeWidth: 2, fill: "white" }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="PDR" stroke={COLORS.PDR} strokeWidth={2.5} dot={{ r: 4, strokeWidth: 2, fill: "white" }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="Other" stroke={COLORS.Other} strokeWidth={2.5} dot={{ r: 4, strokeWidth: 2, fill: "white" }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            
+            <div className="mt-4 pt-4 border-t flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleExportPng} disabled={isExporting} className="gap-2">
+                <ImageIcon className="h-4 w-4" /> Save {activeSite === "TAN_9999" ? "9999" : "8888"} Chart as PNG
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="data">
-          <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 bg-muted/40">
-                    <th className="px-4 py-2.5 text-left font-semibold text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Date</div>
-                    </th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-xs" style={{ color: COLORS.Test }}>Test</th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-xs" style={{ color: COLORS.PDR }}>PDR</th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-xs" style={{ color: COLORS.Other }}>Other</th>
-                    <th className="px-4 py-2.5 text-right font-semibold text-xs text-muted-foreground">Total</th>
+          <div className="border rounded-xl overflow-hidden bg-card">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="p-3 text-left">Date</th>
+                  <th className="p-3 text-right">Test</th>
+                  <th className="p-3 text-right">PDR</th>
+                  <th className="p-3 text-right">Other</th>
+                  <th className="p-3 text-right font-bold">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentRows.map((row) => (
+                  <tr key={row.rawDate} className="border-t hover:bg-muted/10">
+                    <td className="p-3 font-mono">{row.date}</td>
+                    <td className="p-3 text-right">{row.Test}</td>
+                    <td className="p-3 text-right">{row.PDR}</td>
+                    <td className="p-3 text-right">{row.Other}</td>
+                    <td className="p-3 text-right font-bold">{row.total}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((row) => (
-                    <tr key={row.rawDate} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-2 font-mono text-xs">{row.date}</td>
-                      <td className="px-4 py-2 text-right font-mono text-xs">{row.Test}</td>
-                      <td className="px-4 py-2 text-right font-mono text-xs">{row.PDR}</td>
-                      <td className="px-4 py-2 text-right font-mono text-xs">{row.Other}</td>
-                      <td className="px-4 py-2 text-right font-mono text-xs font-semibold">{row.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </TabsContent>
       </Tabs>

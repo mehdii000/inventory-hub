@@ -121,20 +121,32 @@ app.on("will-quit", () => {
   }
 });
 
-ipcMain.handle('dialog:saveFile', async (event, arrayBuffer, fileName) => {
+ipcMain.handle('dialog:saveFile', async (event, data, fileName) => {
   const { filePath } = await dialog.showSaveDialog({
     defaultPath: fileName,
-    filters: [
-      { name: 'Excel Files', extensions: ['xlsx'] },
-      { name: 'Zip Files', extensions: ['zip'] }
-    ]
   });
 
   if (filePath) {
-    fs.writeFileSync(filePath, Buffer.from(arrayBuffer));
-    return true; // Success
+    let buffer;
+
+    if (typeof data === 'string') {
+      // It's a Base64 PNG string
+      const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      // It's an ArrayBuffer from Excel
+      buffer = Buffer.from(data);
+    }
+
+    try {
+      fs.writeFileSync(filePath, buffer);
+      return true;
+    } catch (err) {
+      console.error("Save failed:", err);
+      return false;
+    }
   }
-  return false; // User cancelled
+  return false;
 });
 
 ipcMain.handle('get-app-version', () => {
